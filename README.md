@@ -1,5 +1,112 @@
-# Vue 3 + TypeScript + Vite
+# 版本管理系统 (Version Manager)
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+## 1. 项目说明
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+版本管理系统是一个基于Vue 3 + TypeScript + Vite构建的现代化前端应用，用于管理软件产品的版本发布生命周期。系统提供了完整的产品和版本管理功能，包括产品创建、版本管理、权限控制、数据分析等功能，帮助团队更好地组织和管理软件发布流程。
+
+## 2. 目录结构介绍
+
+```
+版本管理系统
+├── public/                 # 静态资源目录
+├── src/                    # 源代码目录
+│   ├── assets/             # 资源文件(图片、字体等)
+│   ├── components/         # 公共组件
+│   ├── layouts/            # 布局组件
+│   │   └── default/        # 默认布局
+│   ├── router/             # 路由配置
+│   ├── views/              # 页面视图组件
+│   │   ├── analysis/       # 数据分析
+│   │   ├── error/          # 错误页面
+│   │   ├── login/          # 登录
+│   │   ├── logs/           # 操作日志
+│   │   ├── permissions/    # 权限管理
+│   │   ├── products/       # 产品管理
+│   │   └── versions/       # 版本管理
+│   ├── App.vue             # 根组件
+│   ├── main.ts             # 应用入口
+│   └── style.css           # 全局样式
+├── index.html              # HTML模板
+├── package.json            # 项目依赖配置
+├── tsconfig.json           # TypeScript配置
+└── vite.config.ts          # Vite构建配置
+```
+
+## 3. 项目框架图
+
+```
+                    +-------------------+
+                    |     版本管理系统     |
+                    +-------------------+
+                              |
+           +------------------+------------------+
+           |                  |                  |
++----------v---------+ +------v------+ +---------v---------+
+|    用户认证模块     | |  核心功能模块  | |    系统管理模块    |
++--------------------+ +-------------+ +-------------------+
+| - 登录             | | - 产品管理    | | - 用户管理         |
+| - 权限控制          | | - 版本管理    | | - 权限配置         |
+|                    | | - 操作日志    | | - 数据分析         |
++--------------------+ +-------------+ +-------------------+
+```
+
+## 4. 功能介绍
+
+### 产品管理
+- 产品创建、查看、编辑和删除
+- 产品列表展示和筛选
+- 产品详情信息管理
+
+### 版本管理
+- 版本创建、查看、编辑
+- 版本状态管理（开发中、测试中、已发布、已废弃）
+- 版本锁定/解锁功能
+- 版本详情查看
+
+### 权限管理
+- 用户权限分配
+- 角色管理
+- 功能权限控制
+
+### 操作日志
+- 记录系统操作历史
+- 日志查询和筛选
+
+### 数据分析
+- 版本发布统计
+- 产品状态分析
+- 数据可视化展示
+
+## 5. 快速开始
+
+### 环境要求
+- Node.js 16.x 或更高版本
+- npm 8.x 或更高版本
+
+### 安装依赖
+```bash
+npm install
+```
+
+### 开发模式启动
+```bash
+npm run dev
+```
+
+### 构建生产版本
+```bash
+npm run build
+```
+
+### 预览生产构建
+```bash
+npm run preview
+```
+
+## 开发者
+- 本系统使用Vue 3 + TypeScript + Element Plus + Vite开发
+- 采用Composition API开发模式
+- 状态管理使用Pinia
+- 路由管理使用Vue Router
+
+
