@@ -127,6 +127,8 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search, Refresh } from '@element-plus/icons-vue';
+import versionApi from '@/api/version';
+import productApi from '@/api/product';
 
 const route = useRoute();
 const router = useRouter();
@@ -148,51 +150,8 @@ const pageSize = ref(10);
 const total = ref(0);
 const loading = ref(false);
 
-// 版本列表（模拟数据）
-const versionList = ref([
-  {
-    id: 'V001',
-    productId: 'PRD-001',
-    version: '1.0.0',
-    name: '初始版本',
-    description: '初始版本，包含基础功能模块',
-    createTime: '2024-01-10 10:00:00',
-    updateTime: '2024-01-10 10:00:00',
-    status: 'released',
-    locked: true,
-    releaseDate: '2024-01-15',
-    releaseType: 'feature',
-    creator: '张三'
-  },
-  {
-    id: 'V002',
-    productId: 'PRD-001',
-    version: '1.1.0',
-    name: '功能更新版本',
-    description: '新增数据导出功能，修复已知问题',
-    createTime: '2024-01-15 14:30:00',
-    updateTime: '2024-01-15 14:30:00',
-    status: 'testing',
-    locked: false,
-    releaseDate: '2024-01-25',
-    releaseType: 'feature',
-    creator: '李四'
-  },
-  {
-    id: 'V003',
-    productId: 'PRD-001',
-    version: '1.2.0-beta',
-    name: '测试版本',
-    description: '重构用户界面，优化性能',
-    createTime: '2024-01-20 09:15:00',
-    updateTime: '2024-01-20 09:15:00',
-    status: 'developing',
-    locked: false,
-    releaseDate: '2024-02-10',
-    releaseType: 'feature',
-    creator: '王五'
-  }
-]);
+// 版本列表数据
+const versionList = ref([]);
 
 // 获取状态标签类型
 const getStatusType = (status: string) => {
@@ -217,15 +176,42 @@ const getStatusText = (status: string) => {
 };
 
 // 加载版本列表
-const loadVersionList = () => {
+const loadVersionList = async () => {
   loading.value = true;
-  // 模拟API请求
-  setTimeout(() => {
-    // 实际项目中应该调用API获取数据
-    // 这里使用模拟数据
-    total.value = versionList.value.length;
+  try {
+    // 调用API获取版本列表数据
+    const params = {
+      product_id: Number(productId),
+      page: currentPage.value,
+      per_page: pageSize.value,
+      status: searchForm.status || undefined
+    };
+    
+    const response = await versionApi.getVersions(params);
+    if (response.data && response.data.data) {
+      // 处理返回的数据
+      versionList.value = response.data.data.map((item: any) => ({
+        id: item.id,
+        productId: item.product_id,
+        version: item.version_number,
+        name: item.name || item.version_number,
+        description: item.description,
+        createTime: item.created_at,
+        updateTime: item.updated_at,
+        status: item.status,
+        locked: item.locked || false,
+        releaseDate: item.release_date,
+        releaseType: item.release_type,
+        creator: item.author_name || '系统'
+      }));
+      total.value = response.data.total || versionList.value.length;
+    }
+  } catch (error) {
+    console.error('获取版本列表失败:', error);
+    ElMessage.error('获取版本列表失败，请稍后重试');
+  } finally {
     loading.value = false;
-  }, 500);
+  }
 };
 
 // 查看版本详情
@@ -258,10 +244,16 @@ const handleLock = (row: any) => {
       cancelButtonText: '取消',
       type: 'warning',
     }
-  ).then(() => {
-    // 模拟锁定操作
-    row.locked = true;
-    ElMessage.success('锁定成功');
+  ).then(async () => {
+    try {
+      // 调用API锁定版本
+      await versionApi.updateVersion(row.id, { status: 'locked' });
+      row.locked = true;
+      ElMessage.success('锁定成功');
+    } catch (error) {
+      console.error('锁定版本失败:', error);
+      ElMessage.error('锁定版本失败，请稍后重试');
+    }
   }).catch(() => {
     // 取消锁定
   });
@@ -277,10 +269,16 @@ const handleUnlock = (row: any) => {
       cancelButtonText: '取消',
       type: 'info',
     }
-  ).then(() => {
-    // 模拟解锁操作
-    row.locked = false;
-    ElMessage.success('解锁成功');
+  ).then(async () => {
+    try {
+      // 调用API解锁版本
+      await versionApi.updateVersion(row.id, { status: row.status });
+      row.locked = false;
+      ElMessage.success('解锁成功');
+    } catch (error) {
+      console.error('解锁版本失败:', error);
+      ElMessage.error('解锁版本失败，请稍后重试');
+    }
   }).catch(() => {
     // 取消解锁
   });

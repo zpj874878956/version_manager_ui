@@ -95,6 +95,10 @@
               v-model="dependency.productId" 
               placeholder="选择依赖产品" 
               class="dependency-product"
+              @change="(val: number) => { 
+                dependency.versionId = ''; 
+                loadDependencyVersions(val);
+              }"
             >
               <el-option 
                 v-for="product in dependencyProducts" 
@@ -107,9 +111,11 @@
               v-model="dependency.versionId" 
               placeholder="选择版本" 
               class="dependency-version"
+              :disabled="!dependency.productId"
+              @focus="loadDependencyVersions(dependency.productId)"
             >
               <el-option 
-                v-for="version in getDependencyVersions(dependency.productId)" 
+                v-for="version in dependencyVersionsMap[String(dependency.productId)] || []" 
                 :key="version.id" 
                 :label="version.version" 
                 :value="version.id" 
@@ -138,7 +144,10 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Plus, Delete } from '@element-plus/icons-vue';
-import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import type { FormInstance, FormRules } from 'element-plus';
+import versionApi from '@/api/version';
+import productApi from '@/api/product';
 
 const route = useRoute();
 const router = useRouter();
@@ -158,7 +167,7 @@ const versionForm = reactive({
   releaseDate: '',
   releaseType: 'feature',
   releaseNotes: '',
-  dependencies: [] as Array<{ productId: string; versionId: string }>
+  dependencies: [] as Array<{ productId: number | string; versionId: number | string }>
 });
 
 // 表单验证规则
@@ -181,29 +190,41 @@ const versionRules = reactive<FormRules>({
   ]
 });
 
-// 依赖产品列表（模拟数据）
-const dependencyProducts = ref([
-  { id: 'PRD-002', name: '企业财务管理平台' },
-  { id: 'PRD-003', name: '在线教育课程系统' }
-]);
+// 依赖产品列表
+const dependencyProducts = ref<Array<{ id: number; name: string }>>([]);
 
-// 获取依赖产品的版本列表（模拟数据）
-const getDependencyVersions = (productId: string) => {
-  // 模拟不同产品的版本列表
-  const versionMap: Record<string, Array<{ id: string; version: string }>> = {
-    'PRD-002': [
-      { id: 'V001', version: '1.0.0' },
-      { id: 'V002', version: '1.1.0' }
-    ],
-    'PRD-003': [
-      { id: 'V003', version: '2.0.0' },
-      { id: 'V004', version: '2.1.0' }
-    ]
-  };
-  return versionMap[productId] || [];
+// 获取依赖产品的版本列表
+const dependencyVersionsMap = ref<Record<string, Array<{ id: number; version: string }>>>({});
+
+// 加载依赖产品的版本列表
+const loadDependencyVersions = async (productId: string | number) => {
+  if (!productId) return;
+  
+  // 如果已经加载过该产品的版本列表，则直接返回
+  if (dependencyVersionsMap.value[String(productId)]) {
+    return;
+  }
+  
+  try {
+    // 调用API获取产品版本列表
+    const response = await productApi.getProductVersions(productId);
+    if (response.data && response.data.data) {
+      // 处理返回的数据
+      const versions = response.data.data.map((item: any) => ({
+        id: item.id,
+        version: item.version_number || item.version // 兼容不同的API返回格式
+      }));
+      
+      // 缓存版本列表
+      dependencyVersionsMap.value[String(productId)] = versions;
+    }
+  } catch (error) {
+    console.error('获取依赖产品版本列表失败:', error);
+    ElMessage.warning('获取依赖产品版本列表失败，请稍后重试');
+  }
 };
 
-// 添加依赖
+// 移除原来的getDependencyVersions函数，因为我们不再需要它
 const addDependency = () => {
   versionForm.dependencies.push({ productId: '', versionId: '' });
 };
@@ -217,16 +238,44 @@ const removeDependency = (index: number) => {
 const submitForm = async () => {
   if (!versionFormRef.value) return;
   
-  await versionFormRef.value.validate((valid, fields) => {
+  // 检查依赖项是否完整填写
+  const incompleteDependencies = versionForm.dependencies.filter(dep => !dep.productId || !dep.versionId);
+  if (incompleteDependencies.length > 0) {
+    ElMessage.warning('请完整填写所有依赖项信息或删除未完成的依赖项');
+    return;
+  }
+  
+  await versionFormRef.value.validate(async (valid, fields) => {
     if (valid) {
       submitting.value = true;
       
-      // 模拟API请求
-      setTimeout(() => {
+      try {
+        // 准备版本数据
+        const versionData = {
+          product_id: Number(productId.value),
+          version_number: versionForm.version,
+          name: versionForm.name,
+          description: versionForm.description,
+          release_notes: versionForm.releaseNotes,
+          release_date: versionForm.releaseDate,
+          release_type: versionForm.releaseType,
+          author_id: Number(localStorage.getItem('userId') || '1'),
+          dependencies: versionForm.dependencies.map(dep => ({
+            product_id: Number(dep.productId),
+            version_id: Number(dep.versionId)
+          }))
+        };
+        
+        // 调用API创建版本
+        await versionApi.createVersion(versionData);
         ElMessage.success('版本创建成功');
-        submitting.value = false;
         router.push(`/products/${productId.value}`);
-      }, 1000);
+      } catch (error) {
+        console.error('创建版本失败:', error);
+        ElMessage.error('创建版本失败，请稍后重试');
+      } finally {
+        submitting.value = false;
+      }
     } else {
       console.log('表单验证失败', fields);
     }
@@ -251,9 +300,30 @@ const cancelCreate = () => {
 };
 
 // 加载产品信息
-const loadProductInfo = () => {
-  // 模拟API请求获取产品信息
-  // 实际项目中应该调用API获取数据
+const loadProductInfo = async () => {
+  try {
+    // 加载产品信息
+    if (productId.value) {
+      const productResponse = await productApi.getProduct(productId.value);
+      if (productResponse.data) {
+        productName.value = productResponse.data.name;
+      }
+    }
+    
+    // 加载依赖产品列表
+    const productsResponse = await productApi.getProducts();
+    if (productsResponse.data && productsResponse.data.data) {
+      dependencyProducts.value = productsResponse.data.data
+        .filter((product: any) => product.id.toString() !== productId.value) // 排除当前产品
+        .map((product: any) => ({
+          id: product.id,
+          name: product.name
+        }));
+    }
+  } catch (error) {
+    console.error('加载产品信息失败:', error);
+    ElMessage.error('加载产品信息失败，请稍后重试');
+  }
 };
 
 onMounted(() => {
