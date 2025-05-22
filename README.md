@@ -31,6 +31,7 @@
 ├── tsconfig.json           # TypeScript配置
 └── vite.config.ts          # Vite构建配置
 ```
+![becd60e8961183ce.png](http://pic.zzppjj.top/LightPicture/2025/05/becd60e8961183ce.png)
 
 ## 3. 项目框架图
 
