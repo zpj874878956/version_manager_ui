@@ -1,6 +1,6 @@
 <template>
   <div class="version-detail">
-    <!-- 面包屑导航 -->
+    <!-- 面包屑导航 - 显示当前页面在网站层级结构中的位置 -->
     <div class="breadcrumb mb-4">
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/products' }">产品列表</el-breadcrumb-item>
@@ -9,7 +9,7 @@
       </el-breadcrumb>
     </div>
 
-    <!-- 版本信息卡片 -->
+    <!-- 版本信息卡片 - 展示版本的基本信息和状态 -->
     <el-card class="mb-4">
       <template #header>
         <div class="card-header">
@@ -58,7 +58,7 @@
       </div>
     </el-card>
 
-    <!-- 依赖信息卡片 -->
+    <!-- 依赖信息卡片 - 展示当前版本依赖的其他产品版本 -->
     <el-card class="mb-4">
       <template #header>
         <div class="card-header">
@@ -88,7 +88,7 @@
       <el-empty v-else description="暂无依赖信息" />
     </el-card>
 
-    <!-- 状态变更历史卡片 -->
+    <!-- 状态变更历史卡片 - 展示版本状态的变更记录 -->
     <el-card>
       <template #header>
         <div class="card-header">
@@ -120,7 +120,7 @@
       <el-empty v-else description="暂无状态变更历史" />
     </el-card>
 
-    <!-- 状态变更对话框 -->
+    <!-- 状态变更对话框 - 用于变更版本状态 -->
     <el-dialog
       v-model="statusDialogVisible"
       title="变更版本状态"
@@ -172,20 +172,21 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 const route = useRoute();
 const router = useRouter();
 
-// 版本ID
-const versionId = route.params.id as string;
-// 产品ID（假设从版本信息中获取）
-const productId = ref('PRD-001');
+// 获取路由参数
+// 优先使用路由参数中的versionId，其次使用id
+const versionId = route.params.versionId as string || route.params.id as string;
+// 产品ID - 从路由参数获取，如果没有则使用版本信息中的产品ID
+const productId = ref(route.params.id as string || 'PRD-001');
 
-// 状态变更对话框
-const statusDialogVisible = ref(false);
-const statusChanging = ref(false);
+// 状态变更对话框相关变量
+const statusDialogVisible = ref(false); // 对话框显示状态
+const statusChanging = ref(false); // 状态变更中标记
 const statusForm = reactive({
   targetStatus: '',
   comment: ''
 });
 
-// 版本信息（模拟数据）
+// 版本信息（模拟数据）- 包含版本的所有详细信息
 const versionInfo = reactive({
   id: versionId,
   productId: 'PRD-001',
@@ -211,7 +212,7 @@ const versionInfo = reactive({
   ]
 });
 
-// 状态变更历史（模拟数据）
+// 状态变更历史（模拟数据）- 记录版本状态的所有变更
 const statusHistory = ref([
   {
     time: '2023-12-01 09:30:00',
@@ -245,7 +246,9 @@ const statusHistory = ref([
   }
 ]);
 
-// 可用的状态选项
+/**
+ * 计算可用的状态选项 - 根据当前状态返回可选的下一个状态
+ */
 const availableStatusOptions = computed(() => {
   // 根据当前状态返回可选的下一个状态
   const statusMap: Record<string, Array<{value: string, label: string}>> = {
@@ -267,7 +270,11 @@ const availableStatusOptions = computed(() => {
   return statusMap[versionInfo.status] || [];
 });
 
-// 获取状态标签类型
+/**
+ * 获取状态标签类型 - 根据状态返回对应的标签类型
+ * @param status 版本状态
+ * @returns 标签类型
+ */
 const getStatusType = (status: string) => {
   const statusMap: Record<string, string> = {
     developing: 'info',
@@ -278,7 +285,11 @@ const getStatusType = (status: string) => {
   return statusMap[status] || 'default';
 };
 
-// 获取状态文本
+/**
+ * 获取状态文本 - 将状态代码转换为显示文本
+ * @param status 版本状态
+ * @returns 状态显示文本
+ */
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
     developing: '开发中',
@@ -289,7 +300,11 @@ const getStatusText = (status: string) => {
   return statusMap[status] || '未知';
 };
 
-// 获取发布类型文本
+/**
+ * 获取发布类型文本 - 将发布类型代码转换为显示文本
+ * @param type 发布类型
+ * @returns 发布类型显示文本
+ */
 const getReleaseTypeText = (type: string) => {
   const typeMap: Record<string, string> = {
     feature: '功能更新',
@@ -301,7 +316,11 @@ const getReleaseTypeText = (type: string) => {
   return typeMap[type] || '未知';
 };
 
-// 获取时间线项目类型
+/**
+ * 获取时间线项目类型 - 根据操作类型返回对应的时间线项目类型
+ * @param action 操作类型
+ * @returns 时间线项目类型
+ */
 const getTimelineItemType = (action: string) => {
   const actionMap: Record<string, string> = {
     '创建版本': 'primary',
@@ -312,13 +331,17 @@ const getTimelineItemType = (action: string) => {
   return actionMap[action] || 'default';
 };
 
-// 加载版本信息
+/**
+ * 加载版本信息 - 从API获取版本详情
+ */
 const loadVersionInfo = () => {
   // 模拟API请求获取版本信息
   // 实际项目中应该调用API获取数据
 };
 
-// 编辑版本
+/**
+ * 编辑版本 - 处理编辑按钮点击事件
+ */
 const handleEdit = () => {
   if (versionInfo.locked) {
     ElMessage.warning('版本已锁定，无法编辑');
@@ -327,7 +350,9 @@ const handleEdit = () => {
   ElMessage.info('编辑版本信息');
 };
 
-// 锁定版本
+/**
+ * 锁定版本 - 处理锁定按钮点击事件
+ */
 const handleLockVersion = () => {
   ElMessageBox.confirm(
     '确定要锁定该版本吗？锁定后将无法修改版本信息。',
@@ -354,7 +379,9 @@ const handleLockVersion = () => {
   });
 };
 
-// 解锁版本
+/**
+ * 解锁版本 - 处理解锁按钮点击事件
+ */
 const handleUnlockVersion = () => {
   ElMessageBox.confirm(
     '确定要解锁该版本吗？',
@@ -381,19 +408,27 @@ const handleUnlockVersion = () => {
   });
 };
 
-// 查看依赖
+/**
+ * 查看依赖 - 跳转到依赖版本的详情页
+ * @param productId 产品ID
+ * @param versionId 版本ID
+ */
 const viewDependency = (productId: string, versionId: string) => {
   router.push(`/versions/${versionId}`);
 };
 
-// 打开状态变更对话框
+/**
+ * 打开状态变更对话框
+ */
 const openStatusChangeDialog = () => {
   statusForm.targetStatus = '';
   statusForm.comment = '';
   statusDialogVisible.value = true;
 };
 
-// 确认状态变更
+/**
+ * 确认状态变更 - 处理状态变更确认事件
+ */
 const confirmStatusChange = () => {
   if (!statusForm.targetStatus) {
     ElMessage.warning('请选择目标状态');
@@ -423,6 +458,7 @@ const confirmStatusChange = () => {
   }, 1000);
 };
 
+// 组件挂载时加载版本信息
 onMounted(() => {
   loadVersionInfo();
 });

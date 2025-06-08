@@ -40,6 +40,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '产品详情', requiresAuth: true }
       },
       {
+        path: 'products/:id/versions/create',
+        name: 'ProductVersionCreate',
+        component: () => import('@/views/versions/create.vue'),
+        meta: { title: '创建版本', requiresAuth: true }
+      },
+      {
+        path: 'products/:id/versions/:versionId',
+        name: 'ProductVersionDetail',
+        component: () => import('@/views/versions/detail.vue'),
+        meta: { title: '版本详情', requiresAuth: true }
+      },
+      {
         path: 'versions/create',
         name: 'VersionCreate',
         component: () => import('@/views/versions/create.vue'),

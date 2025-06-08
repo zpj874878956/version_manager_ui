@@ -1,6 +1,6 @@
 <template>
   <div class="version-list">
-    <!-- 面包屑导航 -->
+    <!-- 面包屑导航 - 显示当前页面在网站层级结构中的位置 -->
     <div class="breadcrumb mb-4">
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/products' }">产品列表</el-breadcrumb-item>
@@ -9,6 +9,7 @@
       </el-breadcrumb>
     </div>
 
+    <!-- 页面标题和创建按钮 -->
     <div class="mb-6 flex justify-between items-center">
       <h1 class="text-xl font-semibold">版本列表</h1>
       <el-button type="primary" @click="handleCreateVersion">
@@ -16,7 +17,7 @@
       </el-button>
     </div>
 
-    <!-- 搜索和筛选 -->
+    <!-- 搜索和筛选区域 - 提供版本查询和过滤功能 -->
     <el-card class="mb-4">
       <div class="search-bar">
         <el-form :inline="true" :model="searchForm">
@@ -55,7 +56,7 @@
       </div>
     </el-card>
 
-    <!-- 版本列表 -->
+    <!-- 版本列表表格 - 展示所有版本及其基本信息 -->
     <el-card>
       <el-table
         v-loading="loading"
@@ -106,7 +107,7 @@
         </el-table-column>
       </el-table>
 
-      <!-- 分页 -->
+      <!-- 分页控件 - 控制数据分页显示 -->
       <div class="pagination-container">
         <el-pagination
           v-model:current-page="currentPage"
@@ -133,10 +134,10 @@ import productApi from '@/api/product';
 const route = useRoute();
 const router = useRouter();
 
-// 产品ID（从路由参数获取）
+// 产品ID - 从路由参数获取，用于筛选特定产品的版本
 const productId = route.params.productId as string || 'PRD-001';
 
-// 搜索表单
+// 搜索表单 - 存储搜索和筛选条件
 const searchForm = reactive({
   version: '',
   status: '',
@@ -144,16 +145,20 @@ const searchForm = reactive({
   timeOrder: ''
 });
 
-// 分页相关
-const currentPage = ref(1);
-const pageSize = ref(10);
-const total = ref(0);
-const loading = ref(false);
+// 分页相关变量
+const currentPage = ref(1); // 当前页码
+const pageSize = ref(10);   // 每页显示数量
+const total = ref(0);       // 总记录数
+const loading = ref(false); // 加载状态标记
 
-// 版本列表数据
+// 版本列表数据 - 存储从API获取的版本列表
 const versionList = ref([]);
 
-// 获取状态标签类型
+/**
+ * 获取状态标签类型 - 根据状态返回对应的标签类型
+ * @param status 版本状态
+ * @returns 标签类型
+ */
 const getStatusType = (status: string) => {
   const statusMap: Record<string, string> = {
     developing: 'info',
@@ -164,7 +169,11 @@ const getStatusType = (status: string) => {
   return statusMap[status] || 'default';
 };
 
-// 获取状态文本
+/**
+ * 获取状态文本 - 将状态代码转换为显示文本
+ * @param status 版本状态
+ * @returns 状态显示文本
+ */
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
     developing: '开发中',
@@ -175,7 +184,9 @@ const getStatusText = (status: string) => {
   return statusMap[status] || '未知';
 };
 
-// 加载版本列表
+/**
+ * 加载版本列表 - 从API获取版本列表数据
+ */
 const loadVersionList = async () => {
   loading.value = true;
   try {
@@ -214,17 +225,25 @@ const loadVersionList = async () => {
   }
 };
 
-// 查看版本详情
+/**
+ * 查看版本详情 - 跳转到版本详情页
+ * @param versionId 版本ID
+ */
 const viewVersionDetail = (versionId: string) => {
-  router.push(`/versions/${versionId}`);
+  router.push(`/products/${productId}/versions/${versionId}`);
 };
 
-// 创建版本
+/**
+ * 创建版本 - 跳转到版本创建页面
+ */
 const handleCreateVersion = () => {
-  router.push(`/versions/create?productId=${productId}`);
+  router.push(`/products/${productId}/versions/create`);
 };
 
-// 编辑版本
+/**
+ * 编辑版本 - 处理编辑按钮点击事件
+ * @param row 当前行数据
+ */
 const handleEdit = (row: any) => {
   if (row.locked) {
     ElMessage.warning('版本已锁定，无法编辑');
@@ -234,7 +253,10 @@ const handleEdit = (row: any) => {
   ElMessage.info(`编辑版本：${row.version}`);
 };
 
-// 锁定版本
+/**
+ * 锁定版本 - 处理锁定按钮点击事件
+ * @param row 当前行数据
+ */
 const handleLock = (row: any) => {
   ElMessageBox.confirm(
     `确定要锁定版本 ${row.version} 吗？锁定后将无法修改版本信息。`,
@@ -259,7 +281,10 @@ const handleLock = (row: any) => {
   });
 };
 
-// 解锁版本
+/**
+ * 解锁版本 - 处理解锁按钮点击事件
+ * @param row 当前行数据
+ */
 const handleUnlock = (row: any) => {
   ElMessageBox.confirm(
     `确定要解锁版本 ${row.version} 吗？`,
@@ -284,13 +309,17 @@ const handleUnlock = (row: any) => {
   });
 };
 
-// 搜索
+/**
+ * 搜索 - 处理搜索按钮点击事件
+ */
 const handleSearch = () => {
   currentPage.value = 1;
   loadVersionList();
 };
 
-// 重置搜索
+/**
+ * 重置搜索 - 清空搜索条件并重新加载数据
+ */
 const resetSearch = () => {
   searchForm.version = '';
   searchForm.status = '';
@@ -299,18 +328,25 @@ const resetSearch = () => {
   handleSearch();
 };
 
-// 分页大小变化
+/**
+ * 分页大小变化处理
+ * @param val 新的页面大小
+ */
 const handleSizeChange = (val: number) => {
   pageSize.value = val;
   loadVersionList();
 };
 
-// 当前页变化
+/**
+ * 当前页变化处理
+ * @param val 新的当前页
+ */
 const handleCurrentChange = (val: number) => {
   currentPage.value = val;
   loadVersionList();
 };
 
+// 组件挂载时加载版本列表
 onMounted(() => {
   loadVersionList();
 });

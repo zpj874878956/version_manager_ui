@@ -1,6 +1,6 @@
 <template>
   <div class="version-create">
-    <!-- 面包屑导航 -->
+    <!-- 面包屑导航 - 显示当前页面在网站层级结构中的位置 -->
     <div class="breadcrumb mb-4">
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/products' }">产品列表</el-breadcrumb-item>
@@ -9,7 +9,7 @@
       </el-breadcrumb>
     </div>
 
-    <!-- 创建版本表单卡片 -->
+    <!-- 创建版本表单卡片 - 包含所有版本创建相关的表单字段 -->
     <el-card>
       <template #header>
         <div class="card-header">
@@ -24,7 +24,7 @@
         label-width="120px" 
         class="version-form"
       >
-        <!-- 基本信息 -->
+        <!-- 基本信息部分 - 包含版本的基础属性 -->
         <h4 class="form-section-title">基本信息</h4>
         <el-divider />
 
@@ -52,7 +52,7 @@
           />
         </el-form-item>
 
-        <!-- 发布信息 -->
+        <!-- 发布信息部分 - 包含版本发布相关的属性 -->
         <h4 class="form-section-title mt-6">发布信息</h4>
         <el-divider />
 
@@ -85,7 +85,7 @@
           />
         </el-form-item>
 
-        <!-- 依赖信息 -->
+        <!-- 依赖信息部分 - 管理当前版本依赖的其他产品版本 -->
         <h4 class="form-section-title mt-6">依赖信息</h4>
         <el-divider />
 
@@ -151,14 +151,14 @@ import productApi from '@/api/product';
 
 const route = useRoute();
 const router = useRouter();
-const versionFormRef = ref<FormInstance>();
-const submitting = ref(false);
+const versionFormRef = ref<FormInstance>(); // 表单引用，用于表单验证
+const submitting = ref(false); // 提交状态标记
 
-// 获取产品ID，如果没有则使用默认值
-const productId = ref(route.query.productId as string || 'PRD-001');
+// 获取产品ID，优先从路由参数获取，其次从查询参数获取，如果都没有则使用默认值
+const productId = ref(route.params.id as string || route.query.productId as string || 'PRD-001');
 const productName = ref('智能家居控制系统'); // 默认产品名称
 
-// 版本表单数据
+// 版本表单数据 - 包含创建版本所需的所有字段
 const versionForm = reactive({
   productId: productId.value,
   version: '',
@@ -170,7 +170,7 @@ const versionForm = reactive({
   dependencies: [] as Array<{ productId: number | string; versionId: number | string }>
 });
 
-// 表单验证规则
+// 表单验证规则 - 定义各字段的验证条件
 const versionRules = reactive<FormRules>({
   version: [
     { required: true, message: '请输入版本号', trigger: 'blur' },
@@ -190,13 +190,16 @@ const versionRules = reactive<FormRules>({
   ]
 });
 
-// 依赖产品列表
+// 依赖产品列表 - 存储可选择的依赖产品
 const dependencyProducts = ref<Array<{ id: number; name: string }>>([]);
 
-// 获取依赖产品的版本列表
+// 依赖产品版本映射 - 按产品ID存储各产品的版本列表
 const dependencyVersionsMap = ref<Record<string, Array<{ id: number; version: string }>>>({});
 
-// 加载依赖产品的版本列表
+/**
+ * 加载依赖产品的版本列表
+ * @param productId 产品ID
+ */
 const loadDependencyVersions = async (productId: string | number) => {
   if (!productId) return;
   
@@ -224,17 +227,24 @@ const loadDependencyVersions = async (productId: string | number) => {
   }
 };
 
-// 移除原来的getDependencyVersions函数，因为我们不再需要它
+/**
+ * 添加依赖项
+ */
 const addDependency = () => {
   versionForm.dependencies.push({ productId: '', versionId: '' });
 };
 
-// 移除依赖
+/**
+ * 移除依赖项
+ * @param index 依赖项索引
+ */
 const removeDependency = (index: number) => {
   versionForm.dependencies.splice(index, 1);
 };
 
-// 提交表单
+/**
+ * 提交表单 - 创建新版本
+ */
 const submitForm = async () => {
   if (!versionFormRef.value) return;
   
@@ -282,7 +292,9 @@ const submitForm = async () => {
   });
 };
 
-// 取消创建
+/**
+ * 取消创建 - 提示用户确认后返回产品详情页
+ */
 const cancelCreate = () => {
   ElMessageBox.confirm(
     '确定要取消创建吗？已填写的内容将不会保存。',
@@ -299,7 +311,9 @@ const cancelCreate = () => {
   });
 };
 
-// 加载产品信息
+/**
+ * 加载产品信息 - 获取当前产品信息和可依赖的产品列表
+ */
 const loadProductInfo = async () => {
   try {
     // 加载产品信息
@@ -326,6 +340,7 @@ const loadProductInfo = async () => {
   }
 };
 
+// 组件挂载时加载产品信息
 onMounted(() => {
   loadProductInfo();
 });

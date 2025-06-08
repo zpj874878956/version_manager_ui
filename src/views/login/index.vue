@@ -6,7 +6,7 @@
         <p class="login-subtitle">专业版本管理系统</p>
       </div>
       
-      <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form">
+      <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" class="login-form">
         <el-form-item prop="username">
           <el-input 
             v-model="loginForm.username" 
@@ -53,15 +53,17 @@ import { ref, reactive } from 'vue';
 import { User, Lock } from '@element-plus/icons-vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import type { FormInstance } from 'element-plus';
+import authApi from '@/api/auth';
 
 const router = useRouter();
 const loading = ref(false);
-
 const loginForm = reactive({
   username: '',
   password: '',
   remember: false
 });
+const loginFormRef = ref<FormInstance>();
 
 const loginRules = {
   username: [
@@ -72,18 +74,45 @@ const loginRules = {
   ]
 };
 
-const handleLogin = () => {
-  loading.value = true;
+const handleLogin = async () => {
+  if (!loginFormRef.value) return;
   
-  // 模拟登录请求
-  setTimeout(() => {
-    // 假设登录成功
-    localStorage.setItem('token', 'demo-token');
-    ElMessage.success('登录成功');
-    router.push('/');
+  await loginFormRef.value.validate(async (valid) => {
+    if (!valid) {
+      return;
+    }
     
-    loading.value = false;
-  }, 1000);
+    loading.value = true;
+    
+    try {
+      const response = await authApi.login({
+        username: loginForm.username,
+        password: loginForm.password
+      });
+      
+      // 保存token到本地存储
+      const token = response.data.token;
+      localStorage.setItem('token', token);
+      
+      // 如果勾选了"记住我"，可以设置token的过期时间更长
+      if (loginForm.remember) {
+        // 这里可以设置一些额外的本地存储项，如用户信息等
+        localStorage.setItem('remember', 'true');
+      }
+      
+      ElMessage.success('登录成功');
+      router.push('/');
+    } catch (error: any) {
+      console.error('登录失败:', error);
+      if (error.response && error.response.data && error.response.data.message) {
+        ElMessage.error(error.response.data.message);
+      } else {
+        ElMessage.error('登录失败，请检查用户名和密码');
+      }
+    } finally {
+      loading.value = false;
+    }
+  });
 };
 </script>
 
