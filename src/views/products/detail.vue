@@ -13,7 +13,7 @@
       <template #header>
         <div class="card-header">
           <h3 class="text-lg font-bold">产品信息</h3>
-          <el-button type="primary" plain size="small" @click="handleEdit">
+          <el-button v-if="isEditPage && userPermissions.canEdit" type="primary" size="small" @click="handleEdit">
             <el-icon><Edit /></el-icon> 编辑
           </el-button>
         </div>
@@ -29,7 +29,7 @@
           </el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ productInfo.createTime || '暂无' }}</el-descriptions-item>
           <el-descriptions-item label="更新时间">{{ productInfo.updateTime || '暂无' }}</el-descriptions-item>
-          <el-descriptions-item label="负责人">{{ productInfo.owner || '暂无' }}</el-descriptions-item>
+          <el-descriptions-item label="负责人">{{ productInfo.owner_name || '暂无' }}</el-descriptions-item>
           <el-descriptions-item label="产品描述" :span="3">
             {{ productInfo.description || '暂无描述' }}
           </el-descriptions-item>
@@ -42,7 +42,7 @@
       <template #header>
         <div class="card-header">
           <h3 class="text-lg font-bold">版本列表</h3>
-          <el-button type="primary" @click="handleCreateVersion">
+          <el-button type="primary" @click="handleCreateVersion" v-if="isEditPage && userPermissions.canEdit">
             <el-icon><Plus /></el-icon> 创建版本
           </el-button>
         </div>
@@ -98,10 +98,10 @@
             <el-button link type="primary" @click="handleViewVersion(scope.row.id)">
               查看
             </el-button>
-            <el-button link type="primary" @click="handleLockVersion(scope.row.id)" v-if="!scope.row.locked">
+            <el-button link type="primary" @click="handleLockVersion(scope.row.id)" v-if="isEditPage && userPermissions.canLock && !scope.row.locked">
               锁定
             </el-button>
-            <el-button link type="danger" @click="handleUnlockVersion(scope.row.id)" v-else>
+            <el-button link type="danger" @click="handleUnlockVersion(scope.row.id)" v-if="isEditPage && userPermissions.canLock && scope.row.locked">
               解锁
             </el-button>
           </template>
@@ -125,16 +125,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Edit, Plus, Search, Refresh } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import productApi from '@/api/product';
 import type { Product } from '@/api/product';
+import userProductPermissionsApi from '@/api/userProductPermissions';
+import versionApi from '@/api/version';
+import userApi from '@/api/user';
 
 // 扩展 Product 类型，添加前端需要的额外属性
 interface ExtendedProduct extends Product {
-  owner?: string;
+  owner_name?: string;
   createTime?: string;
   updateTime?: string;
 }
@@ -173,7 +176,8 @@ const productInfo = reactive<ExtendedProduct>({
   name: '',
   code: '',
   description: '',
-  status: ''
+  status: '',
+  owner_name: ''
 });
 
 // 搜索表单
@@ -184,6 +188,25 @@ const searchForm = reactive({
 
 // 版本列表数据
 const versionList = ref<VersionItem[]>([]);
+
+// 获取当前用户权限（假设有userId）
+const userId = 1; // TODO: 替换为实际登录用户ID
+const userPermissions = ref<{ canEdit: boolean; canLock: boolean }>({ canEdit: false, canLock: false });
+
+// 获取当前用户权限
+const fetchPermissions = async () => {
+  try {
+    const resp = await userProductPermissionsApi.getUserProductPermissions(userId);
+    // 假设返回格式为 { data: [{ product_id, permission_type }] }
+    const perms = resp.data?.find((p: any) => p.product_id == productId) || {};
+    userPermissions.value = {
+      canEdit: perms.permission_type === 'edit' || perms.permission_type === 'admin',
+      canLock: perms.permission_type === 'lock' || perms.permission_type === 'admin',
+    };
+  } catch (e) {
+    userPermissions.value = { canEdit: false, canLock: false };
+  }
+};
 
 // 获取产品状态标签类型
 const getStatusType = (status: string) => {
@@ -240,7 +263,8 @@ const loadProductInfo = async () => {
       const productData = {
         ...response.data,
         createTime: response.data.createTime || response.data.created_at || response.data.create_time,
-        updateTime: response.data.updateTime || response.data.updated_at || response.data.update_time
+        updateTime: response.data.updateTime || response.data.updated_at || response.data.update_time,
+        owner_name: response.data.owner_name || response.data.owner
       };
       Object.assign(productInfo, productData);
     } else if (response) {
@@ -248,7 +272,8 @@ const loadProductInfo = async () => {
       const productData = {
         ...response,
         createTime: response.createTime || response.created_at || response.create_time,
-        updateTime: response.updateTime || response.updated_at || response.update_time
+        updateTime: response.updateTime || response.updated_at || response.update_time,
+        owner_name: response.owner_name || response.owner
       };
       Object.assign(productInfo, productData);
     }
@@ -267,72 +292,52 @@ const loadVersionList = async () => {
   versionsLoading.value = true;
   try {
     const params = {
+      product_id: Number(productId),
       page: currentPage.value,
       per_page: pageSize.value,
       status: searchForm.status || undefined,
       version: searchForm.version || undefined
     };
-    
-    const response = await productApi.getProductVersions(productId, params);
-    console.log('版本列表原始响应:', response);
-    
-    // 根据实际 API 响应结构进行调整
-    if (response && Array.isArray(response)) {
-      // 直接返回数组
-      versionList.value = response;
-      total.value = response.length;
-    } else if (response && response.data && Array.isArray(response.data)) {
-      // data字段是数组
-      versionList.value = response.data;
-      total.value = response.total || response.data.length;
-    } else if (response && response.data && response.data.versions && Array.isArray(response.data.versions)) {
-      // data.versions字段是数组
-      versionList.value = response.data.versions;
-      total.value = response.data.total || response.data.versions.length;
-      
-      // 如果有分页信息
-      if (response.data.current_page) {
-        currentPage.value = response.data.current_page;
-      }
-      if (response.data.pages) {
-        total.value = (response.data.pages || 1) * versionList.value.length;
-      }
-    } else if (response && typeof response === 'object') {
-      // 其他对象结构
-      const resp = response as any;
-      if (resp.versions) {
-        versionList.value = resp.versions;
-        total.value = resp.total || resp.versions.length;
-      } else if (resp.items) {
-        versionList.value = resp.items;
-        total.value = resp.total || resp.items.length;
-      } else if (resp.list) {
-        versionList.value = resp.list;
-        total.value = resp.total || resp.list.length;
-      } else if (resp.data && resp.data.versions) {
-        versionList.value = resp.data.versions;
-        total.value = resp.data.total || resp.data.versions.length;
-      } else {
-        console.warn('未找到版本数据数组，响应结构:', resp);
-        versionList.value = [];
-        total.value = 0;
-      }
-    } else {
-      console.warn('未识别的响应结构:', response);
-      versionList.value = [];
-      total.value = 0;
+    const response = await versionApi.getVersions(params);
+    console.log('【调试】版本接口原始返回:', response);
+    // 统一从 response.data.data 取后端数据
+    const raw = response.data?.data || {};
+    console.log('【调试】后端data字段内容:', raw);
+    let list = [];
+    let totalCount = 0;
+    if (Array.isArray(raw.versions)) {
+      list = raw.versions;
+      totalCount = raw.total || list.length;
+    } else if (Array.isArray(raw.data)) {
+      list = raw.data;
+      totalCount = raw.total || list.length;
     }
-    
-    // 处理字段映射
-    versionList.value = versionList.value.map(item => {
-      return {
-        ...item,
-        createTime: item.createTime || item.created_at || item.create_time,
-        updateTime: item.updateTime || item.updated_at || item.update_time
-      };
-    });
-    
-    console.log('处理后的版本列表:', versionList.value);
+    console.log('【调试】提取到的版本list:', list);
+    const authorIdSet = Array.from(new Set(list.map((item: any) => item.author_id).filter(Boolean)));
+    console.log('【调试】作者ID集合:', authorIdSet);
+    const authorMap: Record<string, string> = {};
+    await Promise.all(authorIdSet.map(async (idRaw) => {
+      const id = String(idRaw); // 强制为字符串，保证索引类型
+      try {
+        const userResp = await userApi.getUser(id);
+        authorMap[id] = userResp.data?.name || userResp.data?.username || '未知';
+      } catch (e) {
+        console.warn('【调试】获取用户信息失败', id, e);
+        authorMap[id] = '未知';
+      }
+    }));
+    console.log('【调试】作者映射表:', authorMap);
+    versionList.value = list.map((item: any) => ({
+      id: item.id,
+      version: item.version_number,
+      createTime: item.created_at,
+      updateTime: item.updated_at,
+      creator: authorMap[String(item.author_id)] || '未知',
+      status: item.status,
+      locked: item.lock_status === true || item.lock_status === 1,
+    }));
+    console.log('【调试】最终映射的版本列表:', versionList.value);
+    total.value = totalCount;
   } catch (error) {
     console.error('获取产品版本列表失败', error);
     ElMessage.error('获取产品版本列表失败');
@@ -371,7 +376,7 @@ const handleCurrentChange = (val: number) => {
 
 // 编辑产品
 const handleEdit = () => {
-  router.push(`/products/${productId}/edit`);
+  router.push(`/products/edit/${productId}`);
 };
 
 // 创建版本
@@ -432,9 +437,13 @@ const handleUnlockVersion = async (id: string | number) => {
   }
 };
 
+// 判断是否为编辑页面
+const isEditPage = computed(() => route.path.endsWith('/edit') || route.query.edit === 'true');
+
 onMounted(() => {
   loadProductInfo();
   loadVersionList();
+  fetchPermissions();
 });
 </script>
 

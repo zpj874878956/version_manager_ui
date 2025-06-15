@@ -16,6 +16,7 @@ export interface Product {
   createTime?: string;
   updateTime?: string;
   owner?: string;
+  owner_name?: string;
 }
 
 // 产品API服务

@@ -34,6 +34,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '产品列表', requiresAuth: true }
       },
       {
+        path: 'products/edit/:id',
+        name: 'ProductEdit',
+        component: () => import('@/views/products/edit.vue'),
+        meta: { title: '编辑产品', requiresAuth: true }
+      },
+      {
+        path: 'products/create',
+        name: 'ProductCreate',
+        component: () => import('@/views/products/edit.vue'),
+        meta: { title: '创建产品', requiresAuth: true }
+      },
+      {
         path: 'products/:id',
         name: 'ProductDetail',
         component: () => import('@/views/products/detail.vue'),
@@ -52,6 +64,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '版本详情', requiresAuth: true }
       },
       {
+        path: 'products/:id/versions/:versionId/edit',
+        name: 'ProductVersionEdit',
+        component: () => import('@/views/versions/edit.vue'),
+        meta: { title: '编辑版本', requiresAuth: true }
+      },
+      {
         path: 'versions/create',
         name: 'VersionCreate',
         component: () => import('@/views/versions/create.vue'),
@@ -62,6 +80,12 @@ const routes: RouteRecordRaw[] = [
         name: 'VersionDetail',
         component: () => import('@/views/versions/detail.vue'),
         meta: { title: '版本详情', requiresAuth: true }
+      },
+      {
+        path: 'versions/:id/edit',
+        name: 'VersionEdit',
+        component: () => import('@/views/versions/edit.vue'),
+        meta: { title: '编辑版本', requiresAuth: true }
       },
       {
         path: 'versions',

@@ -10,20 +10,20 @@
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="操作类型">
           <el-select v-model="searchForm.actionType" placeholder="请选择操作类型" clearable>
-            <el-option label="创建" value="create" />
-            <el-option label="更新" value="update" />
-            <el-option label="删除" value="delete" />
-            <el-option label="锁定" value="lock" />
-            <el-option label="解锁" value="unlock" />
-            <el-option label="状态变更" value="status_change" />
+            <el-option label="创建" value="创建" />
+            <el-option label="更新" value="更新" />
+            <el-option label="删除" value="删除" />
+            <el-option label="锁定" value="锁定" />
+            <el-option label="解锁" value="解锁" />
+            <el-option label="状态变更" value="状态变更" />
           </el-select>
         </el-form-item>
         <el-form-item label="对象类型">
           <el-select v-model="searchForm.objectType" placeholder="请选择对象类型" clearable>
-            <el-option label="产品" value="product" />
-            <el-option label="版本" value="version" />
-            <el-option label="用户" value="user" />
-            <el-option label="权限" value="permission" />
+            <el-option label="产品" value="产品" />
+            <el-option label="版本" value="版本" />
+            <el-option label="用户" value="用户" />
+            <el-option label="权限" value="权限" />
           </el-select>
         </el-form-item>
         <el-form-item label="操作人">
@@ -150,6 +150,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Search, Refresh } from '@element-plus/icons-vue';
+import logsApi from '@/api/logs';
 
 // 搜索表单
 const searchForm = reactive({
@@ -169,170 +170,110 @@ const loading = ref(false);
 const logDetailDialogVisible = ref(false);
 const currentLog = ref<any>(null);
 
-// 日志列表（模拟数据）
-const logList = ref([
-  {
-    id: '1',
-    time: '2024-01-20 10:30:45',
-    actionType: 'create',
-    objectType: 'product',
-    objectId: 'PRD-001',
-    objectName: '客户管理系统',
-    operator: '张三',
-    detail: '创建了新产品：客户管理系统',
-    ip: '192.168.1.100',
-    result: 'success',
-    changes: []
-  },
-  {
-    id: '2',
-    time: '2024-01-20 11:15:22',
-    actionType: 'create',
-    objectType: 'version',
-    objectId: 'V001',
-    objectName: '1.0.0',
-    operator: '张三',
-    detail: '创建了产品"客户管理系统"的新版本：1.0.0',
-    ip: '192.168.1.100',
-    result: 'success',
-    changes: []
-  },
-  {
-    id: '3',
-    time: '2024-01-20 14:25:10',
-    actionType: 'update',
-    objectType: 'version',
-    objectId: 'V001',
-    objectName: '1.0.0',
-    operator: '李四',
-    detail: '更新了版本1.0.0的信息',
-    ip: '192.168.1.101',
-    result: 'success',
-    changes: [
-      { field: '描述', oldValue: '初始版本', newValue: '初始版本，包含基础功能模块' },
-      { field: '发布日期', oldValue: '2024-01-25', newValue: '2024-01-15' }
-    ]
-  },
-  {
-    id: '4',
-    time: '2024-01-20 16:40:30',
-    actionType: 'status_change',
-    objectType: 'version',
-    objectId: 'V001',
-    objectName: '1.0.0',
-    operator: '王五',
-    detail: '变更了版本1.0.0的状态',
-    ip: '192.168.1.102',
-    result: 'success',
-    changes: [
-      { field: '状态', oldValue: '开发中', newValue: '测试中' }
-    ]
-  },
-  {
-    id: '5',
-    time: '2024-01-21 09:10:15',
-    actionType: 'lock',
-    objectType: 'version',
-    objectId: 'V001',
-    objectName: '1.0.0',
-    operator: '王五',
-    detail: '锁定了版本1.0.0',
-    ip: '192.168.1.102',
-    result: 'success',
-    changes: []
-  },
-  {
-    id: '6',
-    time: '2024-01-21 10:30:00',
-    actionType: 'create',
-    objectType: 'user',
-    objectId: '5',
-    objectName: '赵六',
-    operator: '张三',
-    detail: '创建了新用户：赵六',
-    ip: '192.168.1.100',
-    result: 'success',
-    changes: []
-  },
-  {
-    id: '7',
-    time: '2024-01-21 11:45:20',
-    actionType: 'update',
-    objectType: 'permission',
-    objectId: 'PERM-001',
-    objectName: '用户权限',
-    operator: '张三',
-    detail: '更新了用户"李四"的产品权限',
-    ip: '192.168.1.100',
-    result: 'success',
-    changes: [
-      { field: '客户管理系统权限', oldValue: '只读', newValue: '编辑' }
-    ]
-  },
-  {
-    id: '8',
-    time: '2024-01-22 09:20:30',
-    actionType: 'status_change',
-    objectType: 'version',
-    objectId: 'V001',
-    objectName: '1.0.0',
-    operator: '王五',
-    detail: '变更了版本1.0.0的状态',
-    ip: '192.168.1.102',
-    result: 'success',
-    changes: [
-      { field: '状态', oldValue: '测试中', newValue: '已发布' }
-    ]
-  }
-]);
+// 日志列表
+const logList = ref<any[]>([]);
 
 // 获取操作类型标签
 const getActionTypeTag = (type: string) => {
   const typeMap: Record<string, string> = {
-    create: 'success',
-    update: 'primary',
-    delete: 'danger',
-    lock: 'warning',
-    unlock: 'info',
-    status_change: 'primary'
+    '创建': 'success',
+    '更新': 'primary',
+    '删除': 'danger',
+    '锁定': 'warning',
+    '解锁': 'info',
+    '状态变更': 'primary'
   };
   return typeMap[type] || 'default';
 };
 
 // 获取操作类型文本
 const getActionTypeText = (type: string) => {
-  const typeMap: Record<string, string> = {
-    create: '创建',
-    update: '更新',
-    delete: '删除',
-    lock: '锁定',
-    unlock: '解锁',
-    status_change: '状态变更'
-  };
-  return typeMap[type] || '未知';
+  return type || '未知';
 };
 
 // 获取对象类型文本
 const getObjectTypeText = (type: string) => {
-  const typeMap: Record<string, string> = {
-    product: '产品',
-    version: '版本',
-    user: '用户',
-    permission: '权限'
-  };
-  return typeMap[type] || '未知';
+  return type || '未知';
 };
 
 // 加载日志列表
-const loadLogList = () => {
+const loadLogList = async () => {
   loading.value = true;
-  // 模拟API请求
-  setTimeout(() => {
-    // 实际项目中应该调用API获取数据
-    // 这里使用模拟数据
-    total.value = logList.value.length;
+  try {
+    // 构建查询参数
+    const params: any = {
+      page: currentPage.value,
+      page_size: pageSize.value
+    };
+    
+    if (searchForm.actionType) {
+      params.operation_type = searchForm.actionType;
+    }
+    
+    if (searchForm.objectType) {
+      params.object_type = searchForm.objectType;
+    }
+    
+    if (searchForm.operator) {
+      params.operator_name = searchForm.operator;
+    }
+    
+    if (searchForm.timeRange && searchForm.timeRange.length === 2) {
+      params.start_date = searchForm.timeRange[0];
+      params.end_date = searchForm.timeRange[1];
+    }
+    
+    // 调用API获取数据
+    const response = await logsApi.getOperationLogs(params);
+    
+    if (response.success) {
+      // 转换API返回的数据格式
+      logList.value = response.data.logs.map((log: any) => {
+        // 尝试解析details字段的JSON
+        let changes: Array<{field: string, oldValue: any, newValue: any}> = [];
+        let detailsObj: {
+          changes?: Array<{field: string, oldValue: any, newValue: any}>,
+          message?: string,
+          ip?: string,
+          result?: string
+        } = {};
+        
+        try {
+          detailsObj = JSON.parse(log.details);
+          // 如果有变更信息，转换为changes数组
+          if (detailsObj.changes) {
+            changes = detailsObj.changes;
+          }
+        } catch (e) {
+          console.error('解析日志详情失败', e);
+        }
+        
+        return {
+          id: log.id,
+          time: log.operation_time,
+          actionType: log.operation_type,
+          objectType: log.object_type,
+          objectId: log.object_id,
+          objectName: log.object_name,
+          operator: log.operator_name,
+          detail: detailsObj.message || log.details,
+          ip: detailsObj.ip || '',
+          result: detailsObj.result || 'success',
+          changes: changes
+        };
+      });
+      
+      total.value = response.data.total;
+      currentPage.value = response.data.current_page;
+    } else {
+      ElMessage.error('获取日志列表失败');
+    }
+  } catch (error) {
+    console.error('加载日志列表出错:', error);
+    ElMessage.error('获取日志列表失败');
+  } finally {
     loading.value = false;
-  }, 500);
+  }
 };
 
 // 查看日志详情

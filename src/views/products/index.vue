@@ -58,7 +58,7 @@
           <el-table-column prop="name" label="产品名称" min-width="180" />
           <el-table-column label="负责人" width="120">
             <template #default="scope">
-              {{ scope.row.owner || '未指定' }}
+              {{ scope.row.owner_name || '未指定' }}
             </template>
           </el-table-column>
           <el-table-column label="创建时间" width="180">
@@ -278,7 +278,8 @@ const loadProductList = async () => {
       return {
         ...item,
         createTime: item.createTime || item.created_at || item.create_time,
-        updateTime: item.updateTime || item.updated_at || item.update_time
+        updateTime: item.updateTime || item.updated_at || item.update_time,
+        owner_name: item.owner_name || item.owner // 兼容owner_name
       };
     });
     

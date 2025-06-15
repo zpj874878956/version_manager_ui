@@ -21,6 +21,9 @@
   - `email` (string, 必填)
   - `password` (string, 必填)
   - `is_admin` (bool, 选填)
+  - `name` (string, 必填)
+  - `role_id` (int, 必填)
+  - `department` (string, 必填)
 - **返回**: 新建用户对象（JSON）
 
 ### 获取用户信息

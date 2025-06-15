@@ -35,5 +35,10 @@ export default {
     return apiClient.get('/files', {
       params: { version_id: versionId }
     });
+  },
+
+  // 删除文件
+  deleteFile(fileId: number | string) {
+    return apiClient.delete(`/files/${fileId}`);
   }
 };

@@ -85,49 +85,31 @@
           />
         </el-form-item>
 
-        <!-- 依赖信息部分 - 管理当前版本依赖的其他产品版本 -->
-        <h4 class="form-section-title mt-6">依赖信息</h4>
+        <!-- 文件信息部分 - 上传与版本相关的文件 -->
+        <h4 class="form-section-title mt-6">文件信息</h4>
         <el-divider />
 
-        <el-form-item label="依赖版本">
-          <div v-for="(dependency, index) in versionForm.dependencies" :key="index" class="dependency-item">
-            <el-select 
-              v-model="dependency.productId" 
-              placeholder="选择依赖产品" 
-              class="dependency-product"
-              @change="(val: number) => { 
-                dependency.versionId = ''; 
-                loadDependencyVersions(val);
-              }"
-            >
-              <el-option 
-                v-for="product in dependencyProducts" 
-                :key="product.id" 
-                :label="product.name" 
-                :value="product.id" 
-              />
-            </el-select>
-            <el-select 
-              v-model="dependency.versionId" 
-              placeholder="选择版本" 
-              class="dependency-version"
-              :disabled="!dependency.productId"
-              @focus="loadDependencyVersions(dependency.productId)"
-            >
-              <el-option 
-                v-for="version in dependencyVersionsMap[String(dependency.productId)] || []" 
-                :key="version.id" 
-                :label="version.version" 
-                :value="version.id" 
-              />
-            </el-select>
-            <el-button type="danger" circle @click="removeDependency(index)">
-              <el-icon><Delete /></el-icon>
-            </el-button>
-          </div>
-          <el-button type="primary" plain @click="addDependency">
-            <el-icon><Plus /></el-icon> 添加依赖
-          </el-button>
+        <el-form-item label="上传文件">
+          <el-upload
+            class="upload-demo"
+            drag
+            action="#"
+            :auto-upload="false"
+            :on-change="handleFileChange"
+            :file-list="fileList"
+            :on-remove="handleFileRemove"
+            multiple
+          >
+            <el-icon class="el-icon--upload"><Upload /></el-icon>
+            <div class="el-upload__text">
+              拖拽文件到此处或 <em>点击上传</em>
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">
+                请选择与版本相关的文件，创建版本后将自动上传
+              </div>
+            </template>
+          </el-upload>
         </el-form-item>
 
         <!-- 提交按钮 -->
@@ -143,11 +125,12 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Plus, Delete } from '@element-plus/icons-vue';
+import { Plus, Delete, Upload } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import type { FormInstance, FormRules } from 'element-plus';
+import type { FormInstance, FormRules, UploadFile, UploadUserFile } from 'element-plus';
 import versionApi from '@/api/version';
 import productApi from '@/api/product';
+import fileApi from '@/api/file';
 
 const route = useRoute();
 const router = useRouter();
@@ -158,6 +141,10 @@ const submitting = ref(false); // 提交状态标记
 const productId = ref(route.params.id as string || route.query.productId as string || 'PRD-001');
 const productName = ref('智能家居控制系统'); // 默认产品名称
 
+// 文件列表
+const fileList = ref<UploadUserFile[]>([]);
+const uploadFiles = ref<File[]>([]);
+
 // 版本表单数据 - 包含创建版本所需的所有字段
 const versionForm = reactive({
   productId: productId.value,
@@ -166,8 +153,7 @@ const versionForm = reactive({
   description: '',
   releaseDate: '',
   releaseType: 'feature',
-  releaseNotes: '',
-  dependencies: [] as Array<{ productId: number | string; versionId: number | string }>
+  releaseNotes: ''
 });
 
 // 表单验证规则 - 定义各字段的验证条件
@@ -190,56 +176,51 @@ const versionRules = reactive<FormRules>({
   ]
 });
 
-// 依赖产品列表 - 存储可选择的依赖产品
-const dependencyProducts = ref<Array<{ id: number; name: string }>>([]);
-
-// 依赖产品版本映射 - 按产品ID存储各产品的版本列表
-const dependencyVersionsMap = ref<Record<string, Array<{ id: number; version: string }>>>({});
+/**
+ * 处理文件选择变化事件
+ * @param file 选择的文件
+ */
+const handleFileChange = (uploadInfo: UploadFile) => {
+  if (uploadInfo.raw) {
+    uploadFiles.value.push(uploadInfo.raw);
+  }
+};
 
 /**
- * 加载依赖产品的版本列表
- * @param productId 产品ID
+ * 处理文件移除事件
+ * @param file 移除的文件
  */
-const loadDependencyVersions = async (productId: string | number) => {
-  if (!productId) return;
-  
-  // 如果已经加载过该产品的版本列表，则直接返回
-  if (dependencyVersionsMap.value[String(productId)]) {
-    return;
+const handleFileRemove = (file: UploadFile) => {
+  const index = uploadFiles.value.findIndex(item => item.name === file.name);
+  if (index > -1) {
+    uploadFiles.value.splice(index, 1);
   }
+};
+
+/**
+ * 上传文件
+ * @param versionId 版本ID
+ */
+const uploadVersionFiles = async (versionId: number) => {
+  if (uploadFiles.value.length === 0) return;
+  
+  const uploadPromises = uploadFiles.value.map(file => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('version_id', String(versionId));
+    formData.append('uploader_id', localStorage.getItem('userId') || '1');
+    formData.append('filename', file.name);
+    
+    return fileApi.uploadFile(formData);
+  });
   
   try {
-    // 调用API获取产品版本列表
-    const response = await productApi.getProductVersions(productId);
-    if (response.data && response.data.data) {
-      // 处理返回的数据
-      const versions = response.data.data.map((item: any) => ({
-        id: item.id,
-        version: item.version_number || item.version // 兼容不同的API返回格式
-      }));
-      
-      // 缓存版本列表
-      dependencyVersionsMap.value[String(productId)] = versions;
-    }
+    await Promise.all(uploadPromises);
+    ElMessage.success('文件上传成功');
   } catch (error) {
-    console.error('获取依赖产品版本列表失败:', error);
-    ElMessage.warning('获取依赖产品版本列表失败，请稍后重试');
+    console.error('文件上传失败:', error);
+    ElMessage.warning('部分文件上传失败，请在版本详情页重新上传');
   }
-};
-
-/**
- * 添加依赖项
- */
-const addDependency = () => {
-  versionForm.dependencies.push({ productId: '', versionId: '' });
-};
-
-/**
- * 移除依赖项
- * @param index 依赖项索引
- */
-const removeDependency = (index: number) => {
-  versionForm.dependencies.splice(index, 1);
 };
 
 /**
@@ -247,13 +228,6 @@ const removeDependency = (index: number) => {
  */
 const submitForm = async () => {
   if (!versionFormRef.value) return;
-  
-  // 检查依赖项是否完整填写
-  const incompleteDependencies = versionForm.dependencies.filter(dep => !dep.productId || !dep.versionId);
-  if (incompleteDependencies.length > 0) {
-    ElMessage.warning('请完整填写所有依赖项信息或删除未完成的依赖项');
-    return;
-  }
   
   await versionFormRef.value.validate(async (valid, fields) => {
     if (valid) {
@@ -269,15 +243,18 @@ const submitForm = async () => {
           release_notes: versionForm.releaseNotes,
           release_date: versionForm.releaseDate,
           release_type: versionForm.releaseType,
-          author_id: Number(localStorage.getItem('userId') || '1'),
-          dependencies: versionForm.dependencies.map(dep => ({
-            product_id: Number(dep.productId),
-            version_id: Number(dep.versionId)
-          }))
+          author_id: Number(localStorage.getItem('userId') || '1')
         };
         
         // 调用API创建版本
-        await versionApi.createVersion(versionData);
+        const response = await versionApi.createVersion(versionData);
+        const versionId = response.data?.id || response.data?.data?.id;
+        
+        // 上传文件
+        if (versionId) {
+          await uploadVersionFiles(versionId);
+        }
+        
         ElMessage.success('版本创建成功');
         router.push(`/products/${productId.value}`);
       } catch (error) {
@@ -312,7 +289,7 @@ const cancelCreate = () => {
 };
 
 /**
- * 加载产品信息 - 获取当前产品信息和可依赖的产品列表
+ * 加载产品信息 - 获取当前产品信息
  */
 const loadProductInfo = async () => {
   try {
@@ -322,17 +299,6 @@ const loadProductInfo = async () => {
       if (productResponse.data) {
         productName.value = productResponse.data.name;
       }
-    }
-    
-    // 加载依赖产品列表
-    const productsResponse = await productApi.getProducts();
-    if (productsResponse.data && productsResponse.data.data) {
-      dependencyProducts.value = productsResponse.data.data
-        .filter((product: any) => product.id.toString() !== productId.value) // 排除当前产品
-        .map((product: any) => ({
-          id: product.id,
-          name: product.name
-        }));
     }
   } catch (error) {
     console.error('加载产品信息失败:', error);
@@ -371,21 +337,6 @@ onMounted(() => {
   font-size: 12px;
   color: #999;
   margin-top: 4px;
-}
-
-.dependency-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  gap: 10px;
-}
-
-.dependency-product {
-  width: 200px;
-}
-
-.dependency-version {
-  width: 150px;
 }
 
 .form-buttons {

@@ -11,6 +11,7 @@ export interface Version {
   status?: string;
   created_at?: string;
   updated_at?: string;
+  lock_status?: boolean;
 }
 
 // 版本API服务
@@ -38,5 +39,10 @@ export default {
   // 删除版本
   deleteVersion(versionId: number | string) {
     return apiClient.delete(`/versions/${versionId}`);
+  },
+
+  // 获取版本状态变更历史
+  getVersionStatusHistory(versionId: number | string) {
+    return apiClient.get(`/versions/${versionId}/status-history`);
   }
 };

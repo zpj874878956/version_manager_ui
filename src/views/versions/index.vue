@@ -245,12 +245,11 @@ const handleCreateVersion = () => {
  * @param row 当前行数据
  */
 const handleEdit = (row: any) => {
-  if (row.locked) {
-    ElMessage.warning('版本已锁定，无法编辑');
-    return;
+  if (productId) {
+    router.push(`/products/${productId}/versions/${row.id}/edit`);
+  } else {
+    router.push(`/versions/${row.id}/edit`);
   }
-  // 实际项目中应该跳转到编辑页面
-  ElMessage.info(`编辑版本：${row.version}`);
 };
 
 /**

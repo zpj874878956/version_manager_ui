@@ -52,32 +52,29 @@
         <el-table-column prop="name" label="姓名" />
         <el-table-column prop="email" label="邮箱" />
         <el-table-column prop="department" label="部门" />
-        <el-table-column label="角色">
+        <el-table-column prop="role_id" label="角色">
           <template #default="scope">
-            <el-tag :type="getRoleType(scope.row.role)">
-              {{ getRoleText(scope.row.role) }}
+            <el-tag :type="getRoleType(getRoleNameById(scope.row.role_id))">
+              {{ getRoleNameById(scope.row.role_id) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="状态">
           <template #default="scope">
-            <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'">
-              {{ scope.row.status === 'active' ? '启用' : '禁用' }}
+            <el-tag :type="scope.row.status ? 'success' : 'danger'">
+              {{ scope.row.status ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="lastLoginTime" label="最后登录时间" />
-        <el-table-column label="操作">
+        <el-table-column prop="last_login_at" label="最后登录时间">
+          <template #default="scope">
+            {{ scope.row.last_login_at ? scope.row.last_login_at.replace('T', ' ') : '--' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="320">
           <template #default="scope">
             <el-button link type="primary" @click="handleEditUser(scope.row)">
               编辑
-            </el-button>
-            <el-button 
-              link 
-              :type="scope.row.status === 'active' ? 'danger' : 'success'" 
-              @click="handleToggleStatus(scope.row)"
-            >
-              {{ scope.row.status === 'active' ? '禁用' : '启用' }}
             </el-button>
             <el-button link type="primary" @click="handleAssignProducts(scope.row)">
               分配产品
@@ -122,19 +119,15 @@
         <el-form-item label="部门" prop="department">
           <el-input v-model="userForm.department" placeholder="请输入部门" />
         </el-form-item>
-        <el-form-item label="角色" prop="role">
-          <el-select v-model="userForm.role" placeholder="请选择角色">
-            <el-option label="管理员" value="admin" />
-            <el-option label="开发者" value="developer" />
-            <el-option label="测试人员" value="tester" />
-            <el-option label="产品经理" value="product_manager" />
-            <el-option label="只读用户" value="reader" />
+        <el-form-item label="角色" prop="role_id">
+          <el-select v-model="userForm.role_id" placeholder="请选择角色" @change="onRoleChange">
+            <el-option v-for="role in rolesList" :key="role.id" :label="role.name" :value="role.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="userForm.status">
-            <el-radio label="active">启用</el-radio>
-            <el-radio label="inactive">禁用</el-radio>
+            <el-radio :label="true">启用</el-radio>
+            <el-radio :label="false">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="密码" prop="password" v-if="!isEdit">
@@ -176,7 +169,7 @@
               <el-option label="无权限" value="none" />
               <el-option label="只读" value="read" />
               <el-option label="编辑" value="edit" />
-              <el-option label="管理" value="manage" />
+              <el-option label="管理" value="admin" />
             </el-select>
           </template>
         </el-table-column>
@@ -224,6 +217,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search, Refresh } from '@element-plus/icons-vue';
+import { api } from '@/api/services';
 
 // 搜索表单
 const searchForm = reactive({
@@ -238,81 +232,11 @@ const pageSize = ref(10);
 const total = ref(0);
 const loading = ref(false);
 
-// 用户列表（模拟数据）
-const userList = ref([
-  {
-    id: '1',
-    username: 'admin',
-    name: '系统管理员',
-    email: 'admin@example.com',
-    department: '技术部',
-    role: 'admin',
-    status: 'active',
-    lastLoginTime: '2024-01-20 10:30:45'
-  },
-  {
-    id: '2',
-    username: 'zhangsan',
-    name: '张三',
-    email: 'zhangsan@example.com',
-    department: '开发部',
-    role: 'developer',
-    status: 'active',
-    lastLoginTime: '2024-01-19 16:45:22'
-  },
-  {
-    id: '3',
-    username: 'lisi',
-    name: '李四',
-    email: 'lisi@example.com',
-    department: '测试部',
-    role: 'tester',
-    status: 'active',
-    lastLoginTime: '2024-01-18 09:15:30'
-  },
-  {
-    id: '4',
-    username: 'wangwu',
-    name: '王五',
-    email: 'wangwu@example.com',
-    department: '产品部',
-    role: 'product_manager',
-    status: 'active',
-    lastLoginTime: '2024-01-20 08:20:15'
-  },
-  {
-    id: '5',
-    username: 'zhaoliu',
-    name: '赵六',
-    email: 'zhaoliu@example.com',
-    department: '市场部',
-    role: 'reader',
-    status: 'inactive',
-    lastLoginTime: '2024-01-15 14:10:05'
-  }
-]);
+// 用户列表（移除模拟数据，初始化为空数组）
+const userList = ref<any[]>([]);
 
-// 产品列表（模拟数据）
-const productList = ref([
-  {
-    id: 'PRD-001',
-    name: '客户管理系统',
-    code: 'CRM',
-    permission: 'read'
-  },
-  {
-    id: 'PRD-002',
-    name: '企业财务管理平台',
-    code: 'FIN',
-    permission: 'none'
-  },
-  {
-    id: 'PRD-003',
-    name: '智能家居控制系统',
-    code: 'SMART',
-    permission: 'none'
-  }
-]);
+// 产品列表（接口获取）
+const productList = ref<any[]>([]);
 
 // 用户表单对话框
 const userDialogVisible = ref(false);
@@ -325,8 +249,8 @@ const userForm = reactive({
   name: '',
   email: '',
   department: '',
-  role: '',
-  status: 'active',
+  role_id: null,
+  status: true,
   password: '',
   confirmPassword: ''
 });
@@ -347,7 +271,7 @@ const userRules = {
   department: [
     { required: true, message: '请输入部门', trigger: 'blur' }
   ],
-  role: [
+  role_id: [
     { required: true, message: '请选择角色', trigger: 'change' }
   ],
   status: [
@@ -406,16 +330,16 @@ const resetPasswordRules = {
   ]
 };
 
-// 获取角色标签类型
-const getRoleType = (role: string) => {
-  const roleMap: Record<string, string> = {
-    admin: 'danger',
-    developer: 'primary',
-    tester: 'warning',
-    product_manager: 'success',
-    reader: 'info'
+// 获取角色标签类型（支持中文role_name）
+const getRoleType = (roleName: string) => {
+  const roleTypeMap: Record<string, string> = {
+    '管理员': 'danger',
+    '开发者': 'primary',
+    '测试人员': 'warning',
+    '产品经理': 'success',
+    '只读用户': 'info'
   };
-  return roleMap[role] || 'default';
+  return roleTypeMap[roleName] || 'default';
 };
 
 // 获取角色文本
@@ -431,15 +355,57 @@ const getRoleText = (role: string) => {
 };
 
 // 加载用户列表
-const loadUserList = () => {
+const loadUserList = async () => {
   loading.value = true;
-  // 模拟API请求
-  setTimeout(() => {
-    // 实际项目中应该调用API获取数据
-    // 这里使用模拟数据
+  try {
+    const res = await api.user.getAllUsers();
+    // 直接用接口返回的数组
+    const arr = Array.isArray(res) ? res : (res.data || res.users || []);
+    userList.value = arr;
     total.value = userList.value.length;
+  } catch (e) {
+    ElMessage.error('获取用户列表失败');
+  } finally {
     loading.value = false;
-  }, 500);
+  }
+};
+
+// 加载产品列表
+const loadProductList = async () => {
+  try {
+    const res = await api.product.getProducts();
+    // 兼容后端返回格式 {data: {products: [...]}}
+    let arr = [];
+    if (Array.isArray(res)) {
+      arr = res;
+    } else if (res.data && Array.isArray(res.data.products)) {
+      arr = res.data.products;
+    } else if (Array.isArray(res.data)) {
+      arr = res.data;
+    } else if (Array.isArray(res.products)) {
+      arr = res.products;
+    }
+    productList.value = arr.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      code: item.code,
+      permission: 'none', // 默认无权限
+    }));
+  } catch (e) {
+    ElMessage.error('获取产品列表失败');
+  }
+};
+
+// 加载角色列表
+const rolesList = ref<any[]>([]);
+const loadRolesList = async () => {
+  try {
+    const res = await api.roles.getRoles();
+    // 直接用接口返回的数组
+    rolesList.value = Array.isArray(res) ? res : (res.data || res.roles || []);
+  } catch (e) {
+    ElMessage.error('获取角色列表失败');
+  }
 };
 
 // 添加用户
@@ -450,8 +416,8 @@ const handleAddUser = () => {
   userForm.name = '';
   userForm.email = '';
   userForm.department = '';
-  userForm.role = '';
-  userForm.status = 'active';
+  userForm.role_id = null;
+  userForm.status = true;
   userForm.password = '';
   userForm.confirmPassword = '';
   userDialogVisible.value = true;
@@ -465,8 +431,8 @@ const handleEditUser = (row: any) => {
   userForm.name = row.name;
   userForm.email = row.email;
   userForm.department = row.department;
-  userForm.role = row.role;
-  userForm.status = row.status;
+  userForm.role_id = row.role_id;
+  userForm.status = !!row.status;
   userForm.password = '';
   userForm.confirmPassword = '';
   userDialogVisible.value = true;
@@ -474,90 +440,84 @@ const handleEditUser = (row: any) => {
 
 // 提交用户表单
 const submitUserForm = () => {
-  userFormRef.value?.validate((valid: boolean) => {
+  userFormRef.value?.validate(async (valid: boolean) => {
     if (valid) {
       submitting.value = true;
-      // 模拟API请求
-      setTimeout(() => {
+      try {
         if (isEdit.value) {
-          // 更新用户
-          const index = userList.value.findIndex(item => item.id === userForm.id);
-          if (index !== -1) {
-            userList.value[index] = {
-              ...userList.value[index],
-              name: userForm.name,
-              email: userForm.email,
-              department: userForm.department,
-              role: userForm.role,
-              status: userForm.status
-            };
-          }
+          await api.user.updateUser(userForm.id, {
+            username: userForm.username,
+            email: userForm.email,
+            role_id: userForm.role_id,
+            name: userForm.name,
+            department: userForm.department,
+            status: !!userForm.status
+          });
           ElMessage.success('用户信息更新成功');
         } else {
-          // 添加用户
-          const newUser = {
-            id: String(userList.value.length + 1),
+          await api.user.createUser({
             username: userForm.username,
-            name: userForm.name,
             email: userForm.email,
+            role_id: userForm.role_id,
+            password: userForm.password,
+            name: userForm.name,
             department: userForm.department,
-            role: userForm.role,
-            status: userForm.status,
-            lastLoginTime: '-'
-          };
-          userList.value.push(newUser);
+            status: !!userForm.status
+          });
           ElMessage.success('用户添加成功');
         }
         submitting.value = false;
         userDialogVisible.value = false;
         loadUserList();
-      }, 1000);
+      } catch (e) {
+        ElMessage.error(isEdit.value ? '用户信息更新失败' : '用户添加失败');
+        submitting.value = false;
+      }
     }
-  });
-};
-
-// 切换用户状态
-const handleToggleStatus = (row: any) => {
-  const action = row.status === 'active' ? '禁用' : '启用';
-  ElMessageBox.confirm(
-    `确定要${action}用户 ${row.name} (${row.username}) 吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: row.status === 'active' ? 'warning' : 'info',
-    }
-  ).then(() => {
-    // 模拟API请求
-    row.status = row.status === 'active' ? 'inactive' : 'active';
-    ElMessage.success(`${action}成功`);
-  }).catch(() => {
-    // 取消操作
   });
 };
 
 // 分配产品权限
-const handleAssignProducts = (row: any) => {
+const handleAssignProducts = async (row: any) => {
   currentUser.value = row;
-  // 重置产品权限
-  productList.value.forEach(product => {
-    product.permission = 'none';
-  });
-  // 模拟获取用户产品权限
-  // 实际项目中应该调用API获取数据
+  await loadProductList();
+  // 获取并回显用户已有产品权限
+  try {
+    const res = await api.userProductPermissions.getUserProductPermissions(row.id);
+    const arr = Array.isArray(res.data) ? res.data : (res.data?.permissions || []);
+    // 回显权限
+    productList.value.forEach(product => {
+      const found = arr.find((p: any) => String(p.product_id) === String(product.id));
+      product.permission = found ? found.permission_type : 'none';
+    });
+  } catch (e) {
+    // 没有权限也不报错
+    productList.value.forEach(product => { product.permission = 'none'; });
+  }
   assignProductDialogVisible.value = true;
 };
 
 // 提交产品权限
-const submitProductPermissions = () => {
+const submitProductPermissions = async () => {
   submitting.value = true;
-  // 模拟API请求
-  setTimeout(() => {
-    // 实际项目中应该调用API保存数据
+  try {
+    const userId = currentUser.value.id;
+    // 只提交非none的权限
+    const promises = productList.value
+      .filter(product => product.permission && product.permission !== 'none')
+      .map(product => api.userProductPermissions.setUserProductPermission({
+        user_id: userId,
+        product_id: product.id,
+        permission_type: product.permission
+      }));
+    await Promise.all(promises);
     ElMessage.success('产品权限分配成功');
-    submitting.value = false;
     assignProductDialogVisible.value = false;
-  }, 1000);
+  } catch (e) {
+    ElMessage.error('产品权限分配失败');
+  } finally {
+    submitting.value = false;
+  }
 };
 
 // 重置密码
@@ -571,16 +531,18 @@ const handleResetPassword = (row: any) => {
 
 // 提交重置密码
 const submitResetPassword = () => {
-  resetPasswordFormRef.value?.validate((valid: boolean) => {
+  resetPasswordFormRef.value?.validate(async (valid: boolean) => {
     if (valid) {
       submitting.value = true;
-      // 模拟API请求
-      setTimeout(() => {
-        // 实际项目中应该调用API重置密码
+      try {
+        await api.user.updateUser(resetPasswordForm.userId, { password: resetPasswordForm.password });
         ElMessage.success('密码重置成功');
         submitting.value = false;
         resetPasswordDialogVisible.value = false;
-      }, 1000);
+      } catch (e) {
+        ElMessage.error('密码重置失败');
+        submitting.value = false;
+      }
     }
   });
 };
@@ -611,8 +573,27 @@ const handleCurrentChange = (val: number) => {
   loadUserList();
 };
 
-onMounted(() => {
-  loadUserList();
+// 角色联动，选中后自动带出其它字段，但可手动编辑
+const onRoleChange = (roleId) => {
+  const role = rolesList.value.find(r => Number(r.id) === Number(roleId));
+  if (role) {
+    userForm.name = role.name;
+    userForm.department = role.description || '';
+    userForm.status = !!role.status;
+  }
+};
+
+// 表格展示角色时通过role_id映射name
+const getRoleNameById = (roleId) => {
+  const id = Number(roleId);
+  const role = rolesList.value.find(r => Number(r.id) === id);
+  return role ? role.name : '--';
+};
+
+onMounted(async () => {
+  await loadRolesList();
+  await loadUserList();
+  loadProductList();
 });
 </script>
 

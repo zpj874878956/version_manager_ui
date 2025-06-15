@@ -7,6 +7,7 @@ export interface User {
   email: string;
   password?: string;
   is_admin?: boolean;
+  role_name?: string;
 }
 
 // 用户API服务
