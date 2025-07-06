@@ -98,10 +98,10 @@
             <el-button link type="primary" @click="handleViewVersion(scope.row.id)">
               查看
             </el-button>
-            <el-button link type="primary" @click="handleLockVersion(scope.row.id)" v-if="isEditPage && userPermissions.canLock && !scope.row.locked">
+            <el-button link type="primary" @click="handleLockVersion()" v-if="isEditPage && userPermissions.canLock && !scope.row.locked">
               锁定
             </el-button>
-            <el-button link type="danger" @click="handleUnlockVersion(scope.row.id)" v-if="isEditPage && userPermissions.canLock && scope.row.locked">
+            <el-button link type="danger" @click="handleUnlockVersion()" v-if="isEditPage && userPermissions.canLock && scope.row.locked">
               解锁
             </el-button>
           </template>
@@ -390,7 +390,7 @@ const handleViewVersion = (id: string | number) => {
 };
 
 // 锁定版本
-const handleLockVersion = async (id: string | number) => {
+const handleLockVersion = async () => {
   try {
     await ElMessageBox.confirm(
       '确定要锁定该版本吗？锁定后将无法修改版本信息。',
@@ -414,7 +414,7 @@ const handleLockVersion = async (id: string | number) => {
 };
 
 // 解锁版本
-const handleUnlockVersion = async (id: string | number) => {
+const handleUnlockVersion = async () => {
   try {
     await ElMessageBox.confirm(
       '确定要解锁该版本吗？',

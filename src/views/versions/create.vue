@@ -125,7 +125,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Plus, Delete, Upload } from '@element-plus/icons-vue';
+import { Upload } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules, UploadFile, UploadUserFile } from 'element-plus';
 import versionApi from '@/api/version';

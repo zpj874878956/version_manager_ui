@@ -8,6 +8,10 @@ export interface User {
   password?: string;
   is_admin?: boolean;
   role_name?: string;
+  name?: string;
+  department?: string;
+  status?: boolean;
+  role_id?: number | string | null;
 }
 
 // 用户API服务

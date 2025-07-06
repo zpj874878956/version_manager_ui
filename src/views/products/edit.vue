@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import type { FormInstance } from 'element-plus';
 import productApi from '@/api/product';
 import type { Product } from '@/api/product';
@@ -127,7 +127,8 @@ const loadProductData = async () => {
     Object.keys(productForm).forEach(key => {
       const typedKey = key as keyof Product;
       if (productData[typedKey] !== undefined) {
-        productForm[typedKey] = productData[typedKey] as any;
+        // @ts-ignore
+        productForm[typedKey] = productData[typedKey];
       }
     });
     

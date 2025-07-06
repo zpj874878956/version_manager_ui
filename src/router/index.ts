@@ -122,7 +122,7 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   // 设置页面标题
   if (to.meta.title) {
     document.title = `${to.meta.title} - 版本管理系统`

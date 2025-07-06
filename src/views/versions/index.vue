@@ -129,7 +129,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search, Refresh } from '@element-plus/icons-vue';
 import versionApi from '@/api/version';
-import productApi from '@/api/product';
 
 const route = useRoute();
 const router = useRouter();

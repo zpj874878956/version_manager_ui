@@ -15,10 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
+import { onMounted } from 'vue';
 
 onMounted(() => {
   // 初始化数据或加载分析数据

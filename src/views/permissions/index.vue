@@ -215,7 +215,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import { Plus, Search, Refresh } from '@element-plus/icons-vue';
 import { api } from '@/api/services';
 
@@ -284,7 +284,7 @@ const userRules = {
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_: any, value: string, callback: any) => {
         if (value !== userForm.password) {
           callback(new Error('两次输入密码不一致'));
         } else {
@@ -318,7 +318,7 @@ const resetPasswordRules = {
   confirmPassword: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_: any, value: string, callback: any) => {
         if (value !== resetPasswordForm.password) {
           callback(new Error('两次输入密码不一致'));
         } else {
@@ -342,25 +342,13 @@ const getRoleType = (roleName: string) => {
   return roleTypeMap[roleName] || 'default';
 };
 
-// 获取角色文本
-const getRoleText = (role: string) => {
-  const roleMap: Record<string, string> = {
-    admin: '管理员',
-    developer: '开发者',
-    tester: '测试人员',
-    product_manager: '产品经理',
-    reader: '只读用户'
-  };
-  return roleMap[role] || '未知';
-};
-
 // 加载用户列表
 const loadUserList = async () => {
   loading.value = true;
   try {
     const res = await api.user.getAllUsers();
     // 直接用接口返回的数组
-    const arr = Array.isArray(res) ? res : (res.data || res.users || []);
+    const arr = Array.isArray(res) ? res : (res.data || []);
     userList.value = arr;
     total.value = userList.value.length;
   } catch (e) {
@@ -402,7 +390,7 @@ const loadRolesList = async () => {
   try {
     const res = await api.roles.getRoles();
     // 直接用接口返回的数组
-    rolesList.value = Array.isArray(res) ? res : (res.data || res.roles || []);
+    rolesList.value = Array.isArray(res) ? res : (res.data || []);
   } catch (e) {
     ElMessage.error('获取角色列表失败');
   }
@@ -574,7 +562,7 @@ const handleCurrentChange = (val: number) => {
 };
 
 // 角色联动，选中后自动带出其它字段，但可手动编辑
-const onRoleChange = (roleId) => {
+const onRoleChange = (roleId: any) => {
   const role = rolesList.value.find(r => Number(r.id) === Number(roleId));
   if (role) {
     userForm.name = role.name;
@@ -584,7 +572,7 @@ const onRoleChange = (roleId) => {
 };
 
 // 表格展示角色时通过role_id映射name
-const getRoleNameById = (roleId) => {
+const getRoleNameById = (roleId: any) => {
   const id = Number(roleId);
   const role = rolesList.value.find(r => Number(r.id) === id);
   return role ? role.name : '--';

@@ -220,7 +220,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Edit, Lock, Unlock, Upload, Download, Document, Delete } from '@element-plus/icons-vue';
+import { Edit, Lock, Unlock, Upload, Download, Delete } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import versionApi from '@/api/version';
 import userApi from '@/api/user';
@@ -323,22 +323,6 @@ const getStatusText = (status: string) => {
     deprecated: '已废弃'
   };
   return statusMap[status] || '未知';
-};
-
-/**
- * 获取发布类型文本 - 将发布类型代码转换为显示文本
- * @param type 发布类型
- * @returns 发布类型显示文本
- */
-const getReleaseTypeText = (type: string) => {
-  const typeMap: Record<string, string> = {
-    feature: '功能更新',
-    bugfix: 'Bug修复',
-    security: '安全更新',
-    performance: '性能优化',
-    other: '其他'
-  };
-  return typeMap[type] || '未知';
 };
 
 /**
@@ -709,7 +693,6 @@ const confirmStatusChange = async () => {
   statusChanging.value = true;
   
   try {
-    const oldStatus = versionInfo.status;
     // 调用API更新版本状态
     await versionApi.updateVersion(versionId, { 
       status: statusForm.targetStatus,
