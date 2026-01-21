@@ -157,11 +157,38 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* 表单元素大小统一 */
-.el-input__inner, 
-.el-select, 
+.el-input__inner,
 .el-button {
   height: 32px;
   line-height: 32px;
+}
+
+/* el-select 样式优化 - 确保选框足够宽以显示文字 */
+.el-select {
+  min-width: 180px;
+  width: 100%;
+}
+
+.el-select .el-input__inner {
+  height: 32px;
+  line-height: 32px;
+}
+
+/* 表单项中的 el-select 宽度优化 */
+.el-form-item .el-select {
+  width: 100%;
+  min-width: 200px;
+}
+
+/* 搜索表单中的 el-select 宽度 */
+.search-area .el-form-item .el-select {
+  min-width: 180px;
+}
+
+/* 表格中的 el-select 宽度 */
+.el-table .el-select {
+  min-width: 150px;
+  width: auto;
 }
 
 .el-button {

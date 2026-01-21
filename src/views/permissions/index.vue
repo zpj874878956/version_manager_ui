@@ -665,4 +665,20 @@ onMounted(async () => {
 .mb-2 {
   margin-bottom: 8px;
 }
+
+/* 确保表格内的 el-select 宽度充足 */
+.el-table .el-select {
+  width: 100%;
+  min-width: 120px;
+}
+
+/* 搜索区域的 el-select 宽度优化 */
+.search-area .el-select {
+  min-width: 160px;
+}
+
+/* 对话框表单中的 el-select 宽度 */
+.el-dialog .el-form-item .el-select {
+  width: 100%;
+}
 </style>
